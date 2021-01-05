@@ -6,6 +6,7 @@
 #define THREAD_MODEL NBDKIT_THREAD_MODEL_SERIALIZE_CONNECTIONS
 
 int64_t gpuGAME_SIZE;
+int64_t *gpuGAME_PTR;
 
 static void 
 gpuGAME_load (void)
@@ -27,6 +28,9 @@ gpuGAME_config(const char *key, const char *value)
     if( strcmp(key, "size")==0 ){
         gpuGAME_SIZE = nbdkit_parse_size(value);
         printf("gpuGAME: gpuGAME_SIZE (%s) = %ld\n", value, gpuGAME_SIZE);
+		
+		cudaMalloc(&gpuGAME_PTR, gpuGAME_SIZE);
+		printf("gpuGAME: GPU memory allocated!\n");
     }
     else{
         printf("gpuGAME: do not recognize this config\n");
