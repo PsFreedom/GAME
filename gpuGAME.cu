@@ -48,14 +48,14 @@ gpuGAME_get_size (void *handle)
 static int 
 gpuGAME_pread (void *handle, void *buf, uint32_t count, uint64_t offset, uint32_t flags)
 {
-    printf("gpuGAME: Ok, I read nothing\n");
+    cudaMemcpy( buf, gpuGAME_PTR + offset, count, cudaMemcpyDeviceToHost );
     return 0;
 }
 
 static int 
 gpuGAME_pwrite (void *handle, const void *buf, uint32_t count, uint64_t offset, uint32_t flags)
 {
-    printf("gpuGAME: Ok, I write nothing\n");
+    cudaMemcpy( gpuGAME_PTR + offset, buf, count, cudaMemcpyHostToDevice );
     return 0;
 }
 
