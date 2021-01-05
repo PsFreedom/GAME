@@ -29,8 +29,13 @@ gpuGAME_config(const char *key, const char *value)
         gpuGAME_SIZE = nbdkit_parse_size(value);
         printf("gpuGAME: gpuGAME_SIZE (%s) = %ld\n", value, gpuGAME_SIZE);
 		
-		cudaMalloc(&gpuGAME_PTR, gpuGAME_SIZE);
-		printf("gpuGAME: GPU memory allocated!\n");
+		if( cudaMalloc(&gpuGAME_PTR, gpuGAME_SIZE) == cudaSuccess ){
+			printf("gpuGAME: GPU memory allocated!\n");
+		}
+		else{
+			printf("gpuGAME: GPU memory allocation failed!\n");
+			return -1;
+		}
     }
     else{
         printf("gpuGAME: do not recognize this config\n");
