@@ -3,10 +3,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#define THREAD_MODEL NBDKIT_THREAD_MODEL_SERIALIZE_CONNECTIONS
+#define THREAD_MODEL NBDKIT_THREAD_MODEL_PARALLEL
 
 uint64_t gpuGAME_SIZE;
-uint64_t *gpuGAME_PTR;
+char    *gpuGAME_PTR;
 
 static void 
 gpuGAME_load (void){
@@ -54,7 +54,7 @@ static int
 gpuGAME_pread (void *handle, void *buf, uint32_t count, uint64_t offset, uint32_t flags)
 {
 	cudaError_t cuda_errno;
-	cuda_errno = cudaMemcpy(buf, (gpuGAME_PTR + offset/sizeof(uint64_t)), count, cudaMemcpyDeviceToHost);
+	cuda_errno = cudaMemcpy(buf, (gpuGAME_PTR + offset), count, cudaMemcpyDeviceToHost);
 	if(cuda_errno != cudaSuccess){
 		printf("\tgpuGAME >> cudaMemcpy ERROR %d\n", cuda_errno);
 		return -1;
@@ -66,7 +66,7 @@ static int
 gpuGAME_pwrite (void *handle, const void *buf, uint32_t count, uint64_t offset, uint32_t flags)
 {
 	cudaError_t cuda_errno;
-    cuda_errno = cudaMemcpy((gpuGAME_PTR + offset/sizeof(uint64_t)), buf, count, cudaMemcpyHostToDevice);
+    cuda_errno = cudaMemcpy((gpuGAME_PTR + offset), buf, count, cudaMemcpyHostToDevice);
 	if(cuda_errno != cudaSuccess){
 		printf("\tgpuGAME >> cudaMemcpy ERROR %d\n", cuda_errno);
 		return -1;
