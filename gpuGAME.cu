@@ -2,8 +2,11 @@
 #include <nbdkit-plugin.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
-#define THREAD_MODEL NBDKIT_THREAD_MODEL_PARALLEL
+#include "async_check.h"
+#define THREAD_MODEL NBDKIT_THREAD_MODEL_SERIALIZE_REQUESTS
+#define TOTAL_ENTRY 256
 
 uint64_t gpuGAME_SIZE;
 char    *gpuGAME_PTR;
@@ -28,20 +31,14 @@ gpuGAME_get_size (void *handle){
 static int 
 gpuGAME_config(const char *key, const char *value)
 {
-	cudaError_t cuda_errno;
-    if( strcmp(key, "size")==0 ){
+    if( strcmp(key, "size")==0 )
+    {
         gpuGAME_SIZE = nbdkit_parse_size(value);
         printf("\tgpuGAME >> SIZE %s = %ld\n", value, gpuGAME_SIZE);
-		printf("\tgpuGAME >> GPU memory pre-alloc - %p\n", gpuGAME_PTR);
 		
-		cuda_errno = cudaMalloc(&gpuGAME_PTR, gpuGAME_SIZE);
-		if( cuda_errno == cudaSuccess ){
-			printf("\tgpuGAME >> GPU memory allocated - %p\n", gpuGAME_PTR);
-		}
-		else{
-			printf("\tgpuGAME >> GPU memory allocation failed! (cuda_errno %u)\n", cuda_errno);
-			return -1;
-		}
+		assert( cudaMalloc(&gpuGAME_PTR, gpuGAME_SIZE) == cudaSuccess );
+        printf("\tgpuGAME >> GPU memory allocated - %p\n", gpuGAME_PTR);
+        async_list_init( TOTAL_ENTRY );
     }
     else{
         printf("\tgpuGAME >> do not recognize this config\n");
@@ -53,24 +50,16 @@ gpuGAME_config(const char *key, const char *value)
 static int 
 gpuGAME_pread (void *handle, void *buf, uint32_t count, uint64_t offset, uint32_t flags)
 {
-	cudaError_t cuda_errno;
-	cuda_errno = cudaMemcpy(buf, (gpuGAME_PTR + offset), count, cudaMemcpyDeviceToHost);
-	if(cuda_errno != cudaSuccess){
-		printf("\tgpuGAME >> cudaMemcpy ERROR %d\n", cuda_errno);
-		return -1;
-	}
+    async_list_add(gpuGAME_PTR + offset, count);
+	assert(cudaMemcpy(buf, (gpuGAME_PTR + offset), count, cudaMemcpyDeviceToHost) == cudaSuccess);
 	return 0;
 }
 
 static int 
 gpuGAME_pwrite (void *handle, const void *buf, uint32_t count, uint64_t offset, uint32_t flags)
 {
-	cudaError_t cuda_errno;
-    cuda_errno = cudaMemcpy((gpuGAME_PTR + offset), buf, count, cudaMemcpyHostToDevice);
-	if(cuda_errno != cudaSuccess){
-		printf("\tgpuGAME >> cudaMemcpy ERROR %d\n", cuda_errno);
-		return -1;
-	}
+    async_list_add(gpuGAME_PTR + offset, count);
+	assert(cudaMemcpy((gpuGAME_PTR + offset), buf, count, cudaMemcpyHostToDevice) == cudaSuccess);
 	return 0;
 }
 
