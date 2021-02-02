@@ -1,12 +1,12 @@
 #define NBDKIT_API_VERSION 2
 #include <nbdkit-plugin.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 
 #include "async_ctrl.h"
 #define THREAD_MODEL NBDKIT_THREAD_MODEL_SERIALIZE_REQUESTS
-#define TOTAL_ENTRY 32
 
 uint64_t gpuGAME_SIZE;
 char    *gpuGAME_PTR;
@@ -38,7 +38,10 @@ gpuGAME_config(const char *key, const char *value)
 		
 		assert( cudaMalloc(&gpuGAME_PTR, gpuGAME_SIZE) == cudaSuccess );
         printf("\tgpuGAME >> GPU memory allocated - %p\n", gpuGAME_PTR);
-        async_list_init( TOTAL_ENTRY );
+    }
+    else if( strcmp(key, "buff")==0 )
+    {
+        async_list_init( atoi(value) );
     }
     else{
         printf("\tgpuGAME >> do not recognize this config\n");
