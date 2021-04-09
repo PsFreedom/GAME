@@ -10,7 +10,6 @@ int sync_cntr;
 
 void async_list_init(int total)
 {
-    printf("\tgpuGAME >> %s - %d\n", __FUNCTION__, total);
     sync_cntr = 0;
     tot_entry = total;
     async_list = (async_list_t*)malloc(sizeof(async_list_t)*total);
@@ -40,7 +39,6 @@ int async_list_add(char *start, uint32_t count)
 {
     int stream_no = async_list_check(start, start + count);
     if( stream_no >= tot_entry ){
-        printf("\tgpuGAME >> %s - DeviceSynchronize %d\n", __FUNCTION__, ++sync_cntr);
         assert( cudaDeviceSynchronize() == cudaSuccess);
         stream_no = 0;
     }
