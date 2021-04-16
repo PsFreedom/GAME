@@ -4,7 +4,6 @@
 #include <string.h>
 #include <assert.h>
 
-#include "async_ctrl.h"
 #define THREAD_MODEL NBDKIT_THREAD_MODEL_SERIALIZE_CONNECTIONS
 
 uint64_t gpuGAME_SIZE;
@@ -29,10 +28,6 @@ gpuGAME_config(const char *key, const char *value)
         gpuGAME_SIZE = nbdkit_parse_size(value);
 		assert( cudaMalloc(&gpuGAME_PTR, gpuGAME_SIZE) == cudaSuccess );
     }
-    else if( strcmp(key, "buff")==0 )
-    {
-        async_list_init( atoi(value) );
-    }
     else{
 		return -1;
     }
@@ -42,16 +37,14 @@ gpuGAME_config(const char *key, const char *value)
 static int 
 gpuGAME_pread (void *handle, void *buf, uint32_t count, uint64_t offset, uint32_t flags)
 {
-    int i = async_list_add(gpuGAME_PTR + offset, count);
-    assert(cudaMemcpyAsync(buf, (gpuGAME_PTR + offset), count, cudaMemcpyDeviceToHost, async_list[i].cpySteam) == cudaSuccess);
+    assert(cudaMemcpy(buf, (gpuGAME_PTR + offset), count, cudaMemcpyDeviceToHost) == cudaSuccess);
 	return 0;
 }
 
 static int 
 gpuGAME_pwrite (void *handle, const void *buf, uint32_t count, uint64_t offset, uint32_t flags)
 {
-    int i = async_list_add(gpuGAME_PTR + offset, count);
-    assert(cudaMemcpyAsync((gpuGAME_PTR + offset), buf, count, cudaMemcpyHostToDevice, async_list[i].cpySteam) == cudaSuccess);
+    assert(cudaMemcpy((gpuGAME_PTR + offset), buf, count, cudaMemcpyHostToDevice) == cudaSuccess);
 	return 0;
 }
 
