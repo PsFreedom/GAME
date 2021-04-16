@@ -26,26 +26,26 @@ gpuGAME_config(const char *key, const char *value)
     if( strcmp(key, "size")==0 )
     {
         gpuGAME_SIZE = nbdkit_parse_size(value);
-		assert( cudaMalloc(&gpuGAME_PTR, gpuGAME_SIZE) == cudaSuccess );
+        assert( cudaMalloc(&gpuGAME_PTR, gpuGAME_SIZE) == cudaSuccess );
     }
     else{
-		return -1;
+        return -1;
     }
-	return 0;
+    return 0;
 }
 
 static int 
 gpuGAME_pread (void *handle, void *buf, uint32_t count, uint64_t offset, uint32_t flags)
 {
     assert(cudaMemcpy(buf, (gpuGAME_PTR + offset), count, cudaMemcpyDeviceToHost) == cudaSuccess);
-	return 0;
+    return 0;
 }
 
 static int 
 gpuGAME_pwrite (void *handle, const void *buf, uint32_t count, uint64_t offset, uint32_t flags)
 {
     assert(cudaMemcpy((gpuGAME_PTR + offset), buf, count, cudaMemcpyHostToDevice) == cudaSuccess);
-	return 0;
+    return 0;
 }
 
 static struct nbdkit_plugin plugin = {
