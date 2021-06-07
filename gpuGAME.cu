@@ -16,6 +16,12 @@ int err_no;
 static void *
 gpuGAME_open (int readonly){
     /* create a handle ... */
+    int num_devices = -1;
+    
+    err_no = cudaGetDeviceCount( &num_devices );
+    assert( err_no == cudaSuccess);
+    printf("\n>>   %s: Total CUDA capable devices: %d\n", __FUNCTION__, num_devices );
+    
     return NBDKIT_HANDLE_NOT_NEEDED;
 }
 
