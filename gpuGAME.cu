@@ -11,16 +11,28 @@ uint64_t GAME_SIZE;
 char    *GAME_PTR;
 cudaStream_t read_stream;
 cudaStream_t write_stream;
+
 int err_no;
+int num_gpus = -1;
 
 static void *
 gpuGAME_open (int readonly){
     /* create a handle ... */
-    int num_devices = -1;
     
-    err_no = cudaGetDeviceCount( &num_devices );
+    err_no = cudaGetDeviceCount( &num_gpus );
     assert( err_no == cudaSuccess);
-    printf("\n>>   %s: Total CUDA capable devices: %d\n", __FUNCTION__, num_devices );
+    printf("\n\tGAME >> %s: Available CUDA capable devices: %d\n", __FUNCTION__, num_gpus );
+    
+    for( int gpu_id = 0; gpu_id < num_gpus; gpu_id++ ) 
+    {
+        size_t free_mem, tot_mem;
+        
+        err_no = cudaSetDevice( gpu_id );
+        assert( err_no == cudaSuccess);
+        
+        cudaMemGetInfo( &free_mem, &tot_mem );        
+        printf("\tGAME >> %s: Device %d - Free %zd Total %zd\n", __FUNCTION__, gpu_id, free_mem, tot_mem );
+    }
     
     return NBDKIT_HANDLE_NOT_NEEDED;
 }
@@ -37,8 +49,8 @@ gpuGAME_config(const char *key, const char *value)
     {
         GAME_SIZE = nbdkit_parse_size( value );
         err_no    = cudaMalloc( &GAME_PTR, GAME_SIZE );
-        
         assert( err_no == cudaSuccess );
+        
         cudaStreamCreate( &read_stream );
         cudaStreamCreate( &write_stream );
     }
