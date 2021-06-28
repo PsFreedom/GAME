@@ -26,8 +26,9 @@ struct area_desc{
     struct area_desc *next;
 };
 
+
 int num_gpus = -1;
-struct area_desc *area_root = NULL;
+struct area_desc* *area_root;
 
 uint64_t MIN( uint64_t A, uint64_t B ){
     if( A <= B )
@@ -37,11 +38,15 @@ uint64_t MIN( uint64_t A, uint64_t B ){
 
 struct area_desc* find_area( uint64_t offset )
 {
-    struct area_desc *curr = area_root;
-    while( curr != NULL ){
-        if( offset >= curr->start_offset && offset < curr->last_offset )
-            return curr;
-        curr = curr->next;
+    struct area_desc *curr;
+    for( int gpu_id = 0; gpu_id < num_gpus; gpu_id++ ) 
+    {
+        curr = area_root[gpu_id];
+        while( curr != NULL ){
+            if( offset >= curr->start_offset && offset < curr->last_offset )
+                return curr;
+            curr = curr->next;
+        }
     }
     return NULL;
 }
@@ -73,8 +78,8 @@ struct area_desc* make_area( uint64_t offset )
             curr->last_offset  = curr->start_offset + AREA_SZ;
             curr->vram_ptr     = vram_ptr;
             curr->PBV          = NULL;
-            curr->next         = area_root;
-            area_root = curr;
+            curr->next         = area_root[gpu_id];
+            area_root[gpu_id] = curr;
             
             printf("\tGAME >> %s: GPU %d\n", __FUNCTION__, curr->GPU_ID );
             printf("\tGAME >> %s: offset %p - %p\n", __FUNCTION__, (void*)curr->start_offset, (void*)curr->last_offset );
@@ -93,6 +98,7 @@ gpuGAME_open (int readonly){
     printf("\tGAME >> %s: Blocks per Area %lu, Size %lu\n", __FUNCTION__, BLOCK_PER_AREA, GAME_SIZE );
     printf("\tGAME >> %s: CUDA devices: %d\n", __FUNCTION__, num_gpus );
     
+    area_root = (struct area_desc**)malloc(sizeof(struct area_desc*)*num_gpus);
     for( int gpu_id = 0; gpu_id < num_gpus; gpu_id++ ) 
     {
         size_t free_mem = 0, tot_mem = 0;
