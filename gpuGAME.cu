@@ -26,9 +26,15 @@ struct area_desc{
     struct area_desc *next;
 };
 
+struct area_header{
+    struct area_header *next;
+    struct area_desc   *first;
+    uint8_t  GPU_ID;
+    uint64_t count;
+};
 
 int num_gpus = -1;
-struct area_desc* *area_root;
+struct area_header *root;
 
 uint64_t MIN( uint64_t A, uint64_t B ){
     if( A <= B )
@@ -38,15 +44,17 @@ uint64_t MIN( uint64_t A, uint64_t B ){
 
 struct area_desc* find_area( uint64_t offset )
 {
-    struct area_desc *curr;
-    for( int gpu_id = 0; gpu_id < num_gpus; gpu_id++ ) 
-    {
-        curr = area_root[gpu_id];
+    struct area_header *head = root;
+    struct area_desc   *curr;
+    
+    while( head != NULL ){
+        curr = head->first;
         while( curr != NULL ){
             if( offset >= curr->start_offset && offset < curr->last_offset )
                 return curr;
             curr = curr->next;
         }
+        head = head->next;
     }
     return NULL;
 }
@@ -54,38 +62,40 @@ struct area_desc* find_area( uint64_t offset )
 struct area_desc* make_area( uint64_t offset )
 {
     uint64_t *vram_ptr = NULL;
-    struct area_desc *curr;
+    struct area_header *head = root;
+    struct area_desc   *curr;
     
-    for( int gpu_id = 0; gpu_id < num_gpus; gpu_id++ ) 
-    {
+    while( head != NULL ){
         size_t free_mem = 0, tot_mem = 0;
         
-        err_no = cudaSetDevice( gpu_id );
+        err_no = cudaSetDevice( head->GPU_ID );
         assert( err_no == cudaSuccess);
         
         cudaMemGetInfo( &free_mem, &tot_mem );
         if( free_mem > SOFT_LIM )
         {
             printf("\tGAME >> %s: make an area for %p\n", __FUNCTION__, (void*)offset );
-            printf("\tGAME >> %s: Device %d - Free %zd Total %zd\n", __FUNCTION__, gpu_id, free_mem, tot_mem );
+            printf("\tGAME >> %s: Device %d - Free %zd Total %zd\n", __FUNCTION__, head->GPU_ID, free_mem, tot_mem );
             err_no = cudaMalloc( &vram_ptr, AREA_SZ );
             assert( err_no == cudaSuccess );
             assert( vram_ptr != NULL );
             
             curr = (struct area_desc*)malloc(sizeof(struct area_desc));
-            curr->GPU_ID       = gpu_id;
+            curr->GPU_ID       = head->GPU_ID;
             curr->start_offset = (offset/AREA_SZ)   * AREA_SZ;
             curr->last_offset  = curr->start_offset + AREA_SZ;
             curr->vram_ptr     = vram_ptr;
             curr->PBV          = NULL;
-            curr->next         = area_root[gpu_id];
-            area_root[gpu_id] = curr;
+            curr->next         = head->first;
+            head->first        = curr;
+            head->count++;
             
             printf("\tGAME >> %s: GPU %d\n", __FUNCTION__, curr->GPU_ID );
             printf("\tGAME >> %s: offset %p - %p\n", __FUNCTION__, (void*)curr->start_offset, (void*)curr->last_offset );
             printf("\tGAME >> %s: ptr %p\n", __FUNCTION__, curr->vram_ptr );
             return curr;
         }
+        head = head->next;
     }
     return NULL;
 }
@@ -93,18 +103,23 @@ struct area_desc* make_area( uint64_t offset )
 static void *
 gpuGAME_open (int readonly){
     /* create a handle ... */
+    struct area_header *curr;
     
     cudaGetDeviceCount( &num_gpus );
     printf("\tGAME >> %s: Blocks per Area %lu, Size %lu\n", __FUNCTION__, BLOCK_PER_AREA, GAME_SIZE );
     printf("\tGAME >> %s: CUDA devices: %d\n", __FUNCTION__, num_gpus );
     
-    area_root = (struct area_desc**)malloc(sizeof(struct area_desc*)*num_gpus);
     for( int gpu_id = 0; gpu_id < num_gpus; gpu_id++ ) 
     {
         size_t free_mem = 0, tot_mem = 0;
         
         err_no = cudaSetDevice( gpu_id );
         assert( err_no == cudaSuccess);
+        
+        curr = (struct area_header*)malloc(sizeof(struct area_header));
+        curr->GPU_ID = gpu_id;
+        curr->next   = root;
+        root = curr;
 
         cudaMemGetInfo( &free_mem, &tot_mem );        
         printf("\tGAME >> %s: Device %d - Free %zd Total %zd\n", __FUNCTION__, gpu_id, free_mem, tot_mem );
