@@ -1,5 +1,5 @@
 # GAME: GPU-Assisted Memory Expansion
-This guide explains how to prepare and setup GAME on a Linux system. GAME works on any Linux distro with Nvidia CUDA and nbdkit support since GAME is a nbdkit plugin that employs Nvidia CUDA library for data trasferring between system memory (RAM) and GPU memory (VRAM). We use a freshly-installed Ubuntu 20.04 LTS for our baseline system.
+This guide explains how to prepare and setup GAME on a Linux system. GAME works on any Linux distro with Nvidia CUDA and nbdkit support since GAME is a nbdkit plugin that employs Nvidia CUDA library for data trasferring between system memory (RAM) and GPU memory (VRAM). We use a freshly-installed Ubuntu 20.04 LTS (Focal Fossa) for our baseline testbed.
 
 ## Update the system and install required packages
 Dependencies:
@@ -8,12 +8,12 @@ Dependencies:
 
 Command:
 ```
-sudo apt -y install make gcc g++
-sudo apt -y install nbd-server nbd-client nbdkit nbdkit-plugin-dev
-sudo apt -y install nvidia-cuda-toolkit-gcc
-sudo apt -y update
-sudo apt -y upgrade
-sudo apt -y autoremove 
+sudo apt -y install make gcc g++ \
+sudo apt -y install nbd-server nbd-client nbdkit nbdkit-plugin-dev \
+sudo apt -y install nvidia-cuda-toolkit-gcc \
+sudo apt -y update \
+sudo apt -y upgrade \
+sudo apt -y autoremove \
 sudo reboot
 ```
 This command will install everything, cleanup, then reboot the system.
