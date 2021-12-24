@@ -4,8 +4,8 @@ This guide explains how to prepare and setup GAME on a Linux system. GAME works 
 ## Updating the system and installing required packages
 Dependencies:
  - [Nvidia CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit) 
-   - We tested on CUDA 11.2, 11.3, and 11.5 but older or newer versions should work fine as well
-   - The default packages come with Ubuntu may not work, please follow Nvidia website
+   - We tested on CUDA 11.2, 11.3, and 11.5 (older or newer versions should work fine as well)
+   - The default CUDA toolkit package come with Ubuntu repository may not work, please follow Nvidia installation guide
  - [nbdkit](http://manpages.ubuntu.com/manpages/focal/man1/nbdkit.1.html) 
    - We tested on nbdkit 1.16 (should work with other versions as well)
 
