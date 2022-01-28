@@ -74,8 +74,8 @@ struct area_desc* make_area( uint64_t offset )
         cudaMemGetInfo( &free_mem, &tot_mem );
         if( free_mem > SOFT_LIM )
         {
-            printf("\tGAME >> %s: make an area for %p\n", __FUNCTION__, (void*)offset );
-            printf("\tGAME >> %s: Device %d - Free %zd Total %zd\n", __FUNCTION__, head->GPU_ID, free_mem, tot_mem );
+            //printf("\tGAME >> %s: make an area for %p\n", __FUNCTION__, (void*)offset );
+            //printf("\tGAME >> %s: Device %d - Free %zd Total %zd\n", __FUNCTION__, head->GPU_ID, free_mem, tot_mem );
             err_no = cudaMalloc( &vram_ptr, AREA_SZ );
             assert( err_no == cudaSuccess );
             assert( vram_ptr != NULL );
@@ -90,9 +90,9 @@ struct area_desc* make_area( uint64_t offset )
             head->first        = curr;
             head->count++;
             
-            printf("\tGAME >> %s: GPU %d\n", __FUNCTION__, curr->GPU_ID );
-            printf("\tGAME >> %s: offset %p - %p\n", __FUNCTION__, (void*)curr->start_offset, (void*)curr->last_offset );
-            printf("\tGAME >> %s: ptr %p\n", __FUNCTION__, curr->vram_ptr );
+            //printf("\tGAME >> %s: GPU %d\n", __FUNCTION__, curr->GPU_ID );
+            //printf("\tGAME >> %s: offset %p - %p\n", __FUNCTION__, (void*)curr->start_offset, (void*)curr->last_offset );
+            //printf("\tGAME >> %s: ptr %p\n", __FUNCTION__, curr->vram_ptr );
             return curr;
         }
         head = head->next;
@@ -105,9 +105,11 @@ gpuGAME_open (int readonly){
     /* create a handle ... */
     struct area_header *curr;
     
-    cudaGetDeviceCount( &num_gpus );
+    err_no = cudaGetDeviceCount( &num_gpus );
     printf("\tGAME >> %s: Blocks per Area %lu, Size %lu\n", __FUNCTION__, BLOCK_PER_AREA, GAME_SIZE );
     printf("\tGAME >> %s: CUDA devices: %d\n", __FUNCTION__, num_gpus );
+	if( err_no != cudaSuccess )
+		printf("\tGAME >> %s: CUDA err_no %d\n", __FUNCTION__, err_no );
     
     for( int gpu_id = 0; gpu_id < num_gpus; gpu_id++ ) 
     {
@@ -168,6 +170,7 @@ gpuGAME_pread (void *handle, void *buf, uint32_t count, uint64_t offset, uint32_
         curr = find_area( curr_offset );
         if( curr == NULL )
             curr = make_area( curr_offset );
+		assert( curr != NULL );
             
         err_no = cudaSetDevice( curr->GPU_ID );
         assert( err_no == cudaSuccess);
@@ -202,6 +205,7 @@ gpuGAME_pwrite (void *handle, const void *buf, uint32_t count, uint64_t offset, 
         curr = find_area( curr_offset );
         if( curr == NULL )
             curr = make_area( curr_offset );
+		assert( curr != NULL );
             
         err_no = cudaSetDevice( curr->GPU_ID );
         assert( err_no == cudaSuccess);
