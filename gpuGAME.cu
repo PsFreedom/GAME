@@ -12,10 +12,11 @@
 #define AREA_SZ  (BLOCK_PER_AREA*BLOCK_SZ)
 
 int err_no;
+int num_gpus = -1;
 uint64_t GAME_SIZE;
 uint64_t BLOCK_PER_AREA;
-cudaStream_t read_stream;
-cudaStream_t write_stream;
+cudaStream_t *read_stream;
+cudaStream_t *write_stream;
 
 struct area_desc{
     uint8_t  GPU_ID;
@@ -33,7 +34,6 @@ struct area_header{
     uint64_t count;
 };
 
-int num_gpus = -1;
 struct area_header *root;
 
 uint64_t MIN( uint64_t A, uint64_t B ){
@@ -110,6 +110,9 @@ gpuGAME_open (int readonly){
     printf("\tGAME >> %s: CUDA devices: %d\n", __FUNCTION__, num_gpus );
 	if( err_no != cudaSuccess )
 		printf("\tGAME >> %s: CUDA err_no %d\n", __FUNCTION__, err_no );
+	
+	read_stream  = (cudaStream_t *)malloc(sizeof(cudaStream_t)*num_gpus);
+	write_stream = (cudaStream_t *)malloc(sizeof(cudaStream_t)*num_gpus);
     
     for( int gpu_id = 0; gpu_id < num_gpus; gpu_id++ ) 
     {
@@ -117,6 +120,11 @@ gpuGAME_open (int readonly){
         
         err_no = cudaSetDevice( gpu_id );
         assert( err_no == cudaSuccess);
+		
+		err_no = cudaStreamCreate( &read_stream[gpu_id]  );
+		assert( err_no == cudaSuccess);
+		err_no = cudaStreamCreate( &write_stream[gpu_id] );
+		assert( err_no == cudaSuccess);
         
         curr = (struct area_header*)malloc(sizeof(struct area_header));
         curr->GPU_ID = gpu_id;
@@ -140,9 +148,7 @@ gpuGAME_config(const char *key, const char *value)
 {
     if( strcmp(key, "size")==0 )
     {
-        GAME_SIZE = nbdkit_parse_size( value );        
-        cudaStreamCreate( &read_stream );
-        cudaStreamCreate( &write_stream );
+        GAME_SIZE = nbdkit_parse_size( value );
     }
     else if( strcmp(key, "blk_per_area")==0 )
     {
@@ -180,7 +186,7 @@ gpuGAME_pread (void *handle, void *buf, uint32_t count, uint64_t offset, uint32_
         vram_addr  = (uint64_t*)((uint64_t)curr->vram_ptr + (uint64_t)(curr_offset % AREA_SZ));
         
         //printf("\tGAME >> %s: ADDR %p count %u\n", __FUNCTION__, vram_addr, curr_count );
-        err_no = cudaMemcpyAsync( buf, vram_addr, curr_count, cudaMemcpyDeviceToHost, read_stream );
+        err_no = cudaMemcpyAsync( buf, vram_addr, curr_count, cudaMemcpyDeviceToHost, read_stream[curr->GPU_ID] );
         assert( err_no == cudaSuccess);
         
         curr_offset = end_offset;
@@ -215,7 +221,7 @@ gpuGAME_pwrite (void *handle, const void *buf, uint32_t count, uint64_t offset, 
         vram_addr  = (uint64_t*)((uint64_t)curr->vram_ptr + (uint64_t)(curr_offset % AREA_SZ));
         
         //printf("\tGAME >> %s: ADDR %p count %u\n", __FUNCTION__, vram_addr, curr_count );
-        err_no = cudaMemcpyAsync( vram_addr, buf, curr_count, cudaMemcpyHostToDevice, write_stream );
+        err_no = cudaMemcpyAsync( vram_addr, buf, curr_count, cudaMemcpyHostToDevice, write_stream[curr->GPU_ID] );
         assert( err_no == cudaSuccess);
         
         curr_offset = end_offset;
