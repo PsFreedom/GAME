@@ -117,6 +117,7 @@ gpuGAME_open (int readonly){
     for( int gpu_id = 0; gpu_id < num_gpus; gpu_id++ ) 
     {
         size_t free_mem = 0, tot_mem = 0;
+        cudaDeviceProp dev_prop;
         
         err_no = cudaSetDevice( gpu_id );
         assert( err_no == cudaSuccess);
@@ -131,8 +132,10 @@ gpuGAME_open (int readonly){
         curr->next   = root;
         root = curr;
 
-        cudaMemGetInfo( &free_mem, &tot_mem );        
-        printf("\tGAME >> %s: Device %d - Free %zd Total %zd\n", __FUNCTION__, gpu_id, free_mem, tot_mem );
+		cudaMemGetInfo( &free_mem, &tot_mem );
+		cudaGetDeviceProperties( &dev_prop, gpu_id );
+		printf("\tGAME >> %s: (%d) %s\n", __FUNCTION__, gpu_id, dev_prop.name);
+		printf("\tGAME >> %s: \t\tFree %.2lf Total %.2lf (GB)\n", __FUNCTION__, (double)free_mem/(1024*1024*1024), (double)tot_mem/(1024*1024*1024) );
     }
     
     return NBDKIT_HANDLE_NOT_NEEDED;
